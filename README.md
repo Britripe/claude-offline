@@ -2,14 +2,16 @@
 
 内网离线安装包：**Claude Code + ccswitch-tui（命令行版）**，无 root、无网络、零系统库依赖。
 
+> **本次版本：Claude Code `2.1.296`**（上一版打包的是 2.1.282；二进制由 228 MB 增至 245 MB）
+
 | 文件 | 说明 |
 |---|---|
-| `claude-offline-2.1.282-linux-x86_64.tar.gz` | 完整离线包（**151 MB**，解包后 367 MB） |
-| `claude-offline-2.1.282-linux-x86_64.tar.gz.sha256` | 校验和 |
+| `claude-offline-2.1.296-linux-x86_64.tar.gz` | 完整离线包（**158 MB**，解包后 380 MB） |
+| `claude-offline-2.1.296-linux-x86_64.tar.gz.sha256` | 校验和 |
 | `README.md` | 本文件 |
 
 ```
-sha256 = 8a0e72e695dc071400565e93dcb6c0d33793ecf7f4425d33c9789578f2cb3663
+sha256 = 9e530295b19f7971520a107a3d746d096ddb7b3e946484a06ca38867a926bacd
 ```
 
 **归档内部**（解包后可见）：`README.md`（完整文档：依赖审计/验证记录/故障排查/重建方法）、
@@ -21,10 +23,15 @@ sha256 = 8a0e72e695dc071400565e93dcb6c0d33793ecf7f4425d33c9789578f2cb3663
 
 | 组件 | 版本 | 来源与校验 |
 |---|---|---|
-| **Claude Code** | 2.1.282（原生二进制，228 MB） | `downloads.claude.ai`，sha256 `3afe8535…1eed3` **与官方 manifest 一致** |
+| **Claude Code** | 2.1.296（原生二进制，245 MB） | `downloads.claude.ai`，sha256 `24972e3b…d0de` **与官方 manifest 一致** |
 | **ccswitch-tui** | 1.0.0（命令行/TUI 版，替代 GUI 版 cc-switch） | npm，45 个依赖包，**0 个原生模块** |
 | **Node** | v22.23.3 LTS（119 MB） | nodejs.org，sha256 对官方 `SHASUMS256.txt` **校验通过** |
 | **随身运行时** | glibc 2.31 + libstdc++ 10.2.1 + libgcc_s（5.9 MB） | Debian 11 同源三件套 |
+
+```
+Claude Code sha256 = 24972e3bc859fab2b46ed4c1e51f7d6130f06d3bd550811a114640de3370d0de
+            size   = 257,068,216 bytes
+```
 
 ## 二、目标机要求
 
@@ -38,19 +45,20 @@ sha256 = 8a0e72e695dc071400565e93dcb6c0d33793ecf7f4425d33c9789578f2cb3663
 | root | **不需要** |
 | 网络 | 安装**不需要**；运行时需要能访问你配置的模型端点 |
 
-> 已实测：用 tmpfs 盖住系统 `/usr/lib/x86_64-linux-gnu` 与 `/usr/lib64`（系统 ELF 全部无法启动）后，
-> 两个程序靠随身运行时装在的 loader 仍能正常运行。
-> 启动器 shebang 是 `#!/bin/sh`（dash/ash/busybox 均可，目标机不必装 bash）。
+> 已实测：用 tmpfs 盖住系统 `/usr/lib/x86_64-linux-gnu` 与 `/usr/lib64`（掩蔽后两处条目数均为 0，
+> 系统 ELF 全部无法启动 —— `bash: /usr/bin/head: cannot execute: required file not found`，
+> `/usr/bin/true` 退出码 127）后，两个程序靠随身运行时里的 loader 仍能正常运行。
+> 启动器 shebang 是 `#!/bin/sh`（实测 `dash` 可直接运行，ash/busybox 同理，目标机不必装 bash）。
 > 唯一无法随包消除的是「目标机得有个能用的 shell」—— 这也是安装脚本本身的前提，不构成额外门槛。
 
 ## 三、安装（3 步）
 
 ```bash
 # 1) 校验
-sha256sum -c claude-offline-2.1.282-linux-x86_64.tar.gz.sha256
+sha256sum -c claude-offline-2.1.296-linux-x86_64.tar.gz.sha256
 
 # 2) 解包（顶层单目录 claude-offline/，不会散落）
-tar -xzf claude-offline-2.1.282-linux-x86_64.tar.gz
+tar -xzf claude-offline-2.1.296-linux-x86_64.tar.gz
 cd claude-offline
 
 # 3) 安装
@@ -61,7 +69,7 @@ bash install-offline.sh
 
 ```bash
 source ~/.bashrc
-claude --version      # 期望：2.1.282 (Claude Code)
+claude --version      # 期望：2.1.296 (Claude Code)
 ccswitch              # 期望：CC Switch CLI 终端菜单
 ```
 
@@ -83,7 +91,7 @@ ccswitch
 
 ```bash
 bash install-offline.sh --no-ccswitch    # 只装 Claude Code
-bash install-offline.sh --link           # 省 228MB（符号链接，但离线包不能删）
+bash install-offline.sh --link           # 省 245MB（符号链接，但离线包不能删）
 bash install-offline.sh --system-glibc   # 不用随身运行时（改用目标机 glibc）
 bash install-offline.sh --force          # 覆盖已安装（会先备份）
 bash install-offline.sh --no-path        # 不改 shell rc
@@ -101,6 +109,8 @@ bash install-offline.sh --no-path        # 不改 shell rc
 ~/.ccswitch-cli/providers.json    # ccswitch 的供应商库
 ```
 
+安装后实测占用：`~/.local/share/claude` **252 MB**、`~/.local/share/ccswitch-cli` **136 MB**，合计 **387 MB**。
+
 ## 七、卸载
 
 ```bash
@@ -116,16 +126,18 @@ rm -rf ~/.local/share/ccswitch-cli ~/.local/bin/ccswitch
 2. `claude` 首次交互运行会尝试登录 Anthropic 官方账号；内网请改用 API Key + 自建 `BASE_URL`。
 3. 随身运行时只解决 **glibc 版本**问题，不改变架构与内核要求（x86_64、内核 ≥ 2.6.32）。
 4. 已自动写入 `DISABLE_AUTOUPDATER=1` 与 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`，避免离网反复重试。
-5. **本归档是唯一副本**（未压缩的 360 MB 源目录已清理）。要修改内容需先解包。
+5. **升级已有安装**：`bash install-offline.sh --force` 会先备份旧目录再装新版；
+   模型配置（`~/.claude/settings.json`）与 ccswitch 供应商库（`~/.ccswitch-cli/`）不受影响、
+   会被继续沿用，无需重新配置。
 
 ## 九、分批传输（如介质/上传有大小限制）
 
 ```bash
 # 发送端
-split -b 90M -d claude-offline-2.1.282-linux-x86_64.tar.gz cc.part.
+split -b 90M -d claude-offline-2.1.296-linux-x86_64.tar.gz cc.part.
 # 接收端
-cat cc.part.* > claude-offline-2.1.282-linux-x86_64.tar.gz
-sha256sum -c claude-offline-2.1.282-linux-x86_64.tar.gz.sha256
+cat cc.part.* > claude-offline-2.1.296-linux-x86_64.tar.gz
+sha256sum -c claude-offline-2.1.296-linux-x86_64.tar.gz.sha256
 ```
 
 ---
