@@ -2,16 +2,16 @@
 
 内网离线安装包：**Claude Code + ccswitch-tui（命令行版）**，无 root、无网络、零系统库依赖。
 
-> **本次版本：Claude Code `2.1.296`**（上一版打包的是 2.1.282；二进制由 228 MB 增至 245 MB）
+> **本次版本：Claude Code `2.1.300`**（上一版打包的是 2.1.296；二进制由 245 MB 增至 255 MB）
 
 | 文件 | 说明 |
 |---|---|
-| `claude-offline-2.1.296-linux-x86_64.tar.gz` | 完整离线包（**158 MB**，解包后 380 MB） |
-| `claude-offline-2.1.296-linux-x86_64.tar.gz.sha256` | 校验和 |
+| `claude-offline-2.1.300-linux-x86_64.tar.gz` | 完整离线包（**162 MB**，解包后 390 MB） |
+| `claude-offline-2.1.300-linux-x86_64.tar.gz.sha256` | 校验和 |
 | `README.md` | 本文件 |
 
 ```
-sha256 = 9e530295b19f7971520a107a3d746d096ddb7b3e946484a06ca38867a926bacd
+sha256 = 424d69df0b05183e80423a757b19d9ee71f7d7715d9de9464dbf61d5f9242e21
 ```
 
 **归档内部**（解包后可见）：`README.md`（完整文档：依赖审计/验证记录/故障排查/重建方法）、
@@ -23,14 +23,14 @@ sha256 = 9e530295b19f7971520a107a3d746d096ddb7b3e946484a06ca38867a926bacd
 
 | 组件 | 版本 | 来源与校验 |
 |---|---|---|
-| **Claude Code** | 2.1.296（原生二进制，245 MB） | `downloads.claude.ai`，sha256 `24972e3b…d0de` **与官方 manifest 一致** |
+| **Claude Code** | 2.1.300（原生二进制，255 MB） | `downloads.claude.ai`，sha256 `674deba0…5453` **与官方 manifest 一致** |
 | **ccswitch-tui** | 1.0.0（命令行/TUI 版，替代 GUI 版 cc-switch） | npm，45 个依赖包，**0 个原生模块** |
 | **Node** | v22.23.3 LTS（119 MB） | nodejs.org，sha256 对官方 `SHASUMS256.txt` **校验通过** |
 | **随身运行时** | glibc 2.31 + libstdc++ 10.2.1 + libgcc_s（5.9 MB） | Debian 11 同源三件套 |
 
 ```
-Claude Code sha256 = 24972e3bc859fab2b46ed4c1e51f7d6130f06d3bd550811a114640de3370d0de
-            size   = 257,068,216 bytes
+Claude Code sha256 = 674deba0bba9aee479f4503c438b49303b6fdd304b9a471b14977aaec5215453
+            size   = 266,972,344 bytes
 ```
 
 ## 二、目标机要求
@@ -46,8 +46,8 @@ Claude Code sha256 = 24972e3bc859fab2b46ed4c1e51f7d6130f06d3bd550811a114640de337
 | 网络 | 安装**不需要**；运行时需要能访问你配置的模型端点 |
 
 > 已实测：用 tmpfs 盖住系统 `/usr/lib/x86_64-linux-gnu` 与 `/usr/lib64`（掩蔽后两处条目数均为 0，
-> 系统 ELF 全部无法启动 —— `bash: /usr/bin/head: cannot execute: required file not found`，
-> `/usr/bin/true` 退出码 127）后，两个程序靠随身运行时里的 loader 仍能正常运行。
+> 系统 ELF 全部无法启动 —— `/usr/bin/true` 退出码 127）后，两个程序靠随身运行时里的 loader
+> 仍能正常运行。
 > 启动器 shebang 是 `#!/bin/sh`（实测 `dash` 可直接运行，ash/busybox 同理，目标机不必装 bash）。
 > 唯一无法随包消除的是「目标机得有个能用的 shell」—— 这也是安装脚本本身的前提，不构成额外门槛。
 
@@ -55,10 +55,10 @@ Claude Code sha256 = 24972e3bc859fab2b46ed4c1e51f7d6130f06d3bd550811a114640de337
 
 ```bash
 # 1) 校验
-sha256sum -c claude-offline-2.1.296-linux-x86_64.tar.gz.sha256
+sha256sum -c claude-offline-2.1.300-linux-x86_64.tar.gz.sha256
 
 # 2) 解包（顶层单目录 claude-offline/，不会散落）
-tar -xzf claude-offline-2.1.296-linux-x86_64.tar.gz
+tar -xzf claude-offline-2.1.300-linux-x86_64.tar.gz
 cd claude-offline
 
 # 3) 安装
@@ -69,7 +69,7 @@ bash install-offline.sh
 
 ```bash
 source ~/.bashrc
-claude --version      # 期望：2.1.296 (Claude Code)
+claude --version      # 期望：2.1.300 (Claude Code)
 ccswitch              # 期望：CC Switch CLI 终端菜单
 ```
 
@@ -91,7 +91,7 @@ ccswitch
 
 ```bash
 bash install-offline.sh --no-ccswitch    # 只装 Claude Code
-bash install-offline.sh --link           # 省 245MB（符号链接，但离线包不能删）
+bash install-offline.sh --link           # 省 255MB（符号链接，但离线包不能删）
 bash install-offline.sh --system-glibc   # 不用随身运行时（改用目标机 glibc）
 bash install-offline.sh --force          # 覆盖已安装（会先备份）
 bash install-offline.sh --no-path        # 不改 shell rc
@@ -109,7 +109,7 @@ bash install-offline.sh --no-path        # 不改 shell rc
 ~/.ccswitch-cli/providers.json    # ccswitch 的供应商库
 ```
 
-安装后实测占用：`~/.local/share/claude` **252 MB**、`~/.local/share/ccswitch-cli` **136 MB**，合计 **387 MB**。
+安装后实测占用：`~/.local/share/claude` **261 MB**、`~/.local/share/ccswitch-cli` **136 MB**，合计 **396 MB**。
 
 ## 七、卸载
 
@@ -134,10 +134,10 @@ rm -rf ~/.local/share/ccswitch-cli ~/.local/bin/ccswitch
 
 ```bash
 # 发送端
-split -b 90M -d claude-offline-2.1.296-linux-x86_64.tar.gz cc.part.
+split -b 90M -d claude-offline-2.1.300-linux-x86_64.tar.gz cc.part.
 # 接收端
-cat cc.part.* > claude-offline-2.1.296-linux-x86_64.tar.gz
-sha256sum -c claude-offline-2.1.296-linux-x86_64.tar.gz.sha256
+cat cc.part.* > claude-offline-2.1.300-linux-x86_64.tar.gz
+sha256sum -c claude-offline-2.1.300-linux-x86_64.tar.gz.sha256
 ```
 
 ---
