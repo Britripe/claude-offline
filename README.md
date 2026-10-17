@@ -1,21 +1,22 @@
 # 交付说明（先读我）
 
-内网离线安装包：**Claude Code + ccswitch-tui（命令行版）**，无 root、无网络、零系统库依赖。
+内网离线安装包：**Claude Code（仅本体）**，无 root、无网络、零系统库依赖。
 
-> **本次版本：Claude Code `2.1.300`**（上一版打包的是 2.1.296；二进制由 245 MB 增至 255 MB）
+> **本次版本：Claude Code `2.1.300` → `2.1.302`**
+> **本版不再打包 ccswitch-tui**（模型配置请直接写 `~/.claude/settings.json`，见第四节）
 
 | 文件 | 说明 |
 |---|---|
-| `claude-offline-2.1.300-linux-x86_64.tar.gz` | 完整离线包（**162 MB**，解包后 390 MB） |
-| `claude-offline-2.1.300-linux-x86_64.tar.gz.sha256` | 校验和 |
+| `claude-offline-2.1.302-linux-x86_64.tar.gz` | 完整离线包（**128 MB**，解包后 282 MB） |
+| `claude-offline-2.1.302-linux-x86_64.tar.gz.sha256` | 校验和 |
 | `README.md` | 本文件 |
 
 ```
-sha256 = 424d69df0b05183e80423a757b19d9ee71f7d7715d9de9464dbf61d5f9242e21
+sha256 = 5ea36ff0fbf566e00f20f0f5dc8cd0b6495225037042d9200f45981ebbe372f8
 ```
 
 **归档内部**（解包后可见）：`README.md`（完整文档：依赖审计/验证记录/故障排查/重建方法）、
-`UNPACK-FIRST.md`（速查）、4 个安装脚本、各组件与来源 `.deb`。
+`UNPACK-FIRST.md`（速查）、2 个安装脚本、构建脚本、随身运行时及其来源 `.deb`。
 
 ---
 
@@ -23,31 +24,31 @@ sha256 = 424d69df0b05183e80423a757b19d9ee71f7d7715d9de9464dbf61d5f9242e21
 
 | 组件 | 版本 | 来源与校验 |
 |---|---|---|
-| **Claude Code** | 2.1.300（原生二进制，255 MB） | `downloads.claude.ai`，sha256 `674deba0…5453` **与官方 manifest 一致** |
-| **ccswitch-tui** | 1.0.0（命令行/TUI 版，替代 GUI 版 cc-switch） | npm，45 个依赖包，**0 个原生模块** |
-| **Node** | v22.23.3 LTS（119 MB） | nodejs.org，sha256 对官方 `SHASUMS256.txt` **校验通过** |
+| **Claude Code** | 2.1.302（原生二进制，272.6 MB） | `downloads.claude.ai`，sha256 `60d7eb7f…29a5` **与官方 manifest 一致** |
 | **随身运行时** | glibc 2.31 + libstdc++ 10.2.1 + libgcc_s（5.9 MB） | Debian 11 同源三件套 |
 
 ```
-Claude Code sha256 = 674deba0bba9aee479f4503c438b49303b6fdd304b9a471b14977aaec5215453
-            size   = 266,972,344 bytes
+Claude Code sha256 = 60d7eb7f12fbb28a52533fe8be5884097403562aa02dc73991a021c7067e29a5
+            size   = 285,793,528 bytes
 ```
+
+> 二进制由上一版的 255 MB 增至 **272.6 MB**。
 
 ## 二、目标机要求
 
 | 项 | 要求 |
 |---|---|
 | 架构 / 系统 | **Linux x86_64** |
-| **glibc** | **无要求** —— 两个程序都跑在自带运行时上（内核 ≥ 2.6.32） |
-| **图形界面** | **不需要** —— ccswitch 是纯终端 TUI，SSH 里直接用 |
-| 系统 Node | **不需要**（已随包携带） |
+| **glibc** | **无要求** —— 跑在自带运行时上（内核 ≥ 2.6.32） |
+| **图形界面** | **不需要** —— 纯 CLI |
+| 系统 Node | **不需要** |
 | 必备命令 | 安装：`bash`、`tar`、`gzip`、`sha256sum`（发行版自带）；运行：任意 `/bin/sh` |
 | root | **不需要** |
 | 网络 | 安装**不需要**；运行时需要能访问你配置的模型端点 |
 
-> 已实测：用 tmpfs 盖住系统 `/usr/lib/x86_64-linux-gnu` 与 `/usr/lib64`（掩蔽后两处条目数均为 0，
-> 系统 ELF 全部无法启动 —— `/usr/bin/true` 退出码 127）后，两个程序靠随身运行时里的 loader
-> 仍能正常运行。
+> 已实测：用 tmpfs 一次性盖住系统 `/usr/lib/x86_64-linux-gnu` 与 `/usr/lib64`
+> （掩蔽后两处条目数均为 0，系统 ELF 全部无法启动 —— `/usr/bin/true` 退出码 127）后，
+> Claude Code 靠随身运行时里的 loader 仍能正常运行。
 > 启动器 shebang 是 `#!/bin/sh`（实测 `dash` 可直接运行，ash/busybox 同理，目标机不必装 bash）。
 > 唯一无法随包消除的是「目标机得有个能用的 shell」—— 这也是安装脚本本身的前提，不构成额外门槛。
 
@@ -55,10 +56,10 @@ Claude Code sha256 = 674deba0bba9aee479f4503c438b49303b6fdd304b9a471b14977aaec52
 
 ```bash
 # 1) 校验
-sha256sum -c claude-offline-2.1.300-linux-x86_64.tar.gz.sha256
+sha256sum -c claude-offline-2.1.302-linux-x86_64.tar.gz.sha256
 
 # 2) 解包（顶层单目录 claude-offline/，不会散落）
-tar -xzf claude-offline-2.1.300-linux-x86_64.tar.gz
+tar -xzf claude-offline-2.1.302-linux-x86_64.tar.gz
 cd claude-offline
 
 # 3) 安装
@@ -69,30 +70,38 @@ bash install-offline.sh
 
 ```bash
 source ~/.bashrc
-claude --version      # 期望：2.1.300 (Claude Code)
-ccswitch              # 期望：CC Switch CLI 终端菜单
+claude --version      # 期望：2.1.302 (Claude Code)
 ```
 
-## 四、配置模型
+## 四、配置模型端点
+
+本包不再包含供应商切换工具，直接写 `~/.claude/settings.json`：
 
 ```bash
-ccswitch
-#   ► 管理 Providers   —— 填 API Key / Base URL / 模型（内置 50+ 预设）
-#     切换 Provider     —— 写入 ~/.claude/settings.json 的 env 节点
-#     查看状态
+mkdir -p ~/.claude
+cat > ~/.claude/settings.json <<'EOF'
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://内网网关地址:端口",
+    "ANTHROPIC_AUTH_TOKEN": "你的密钥",
+    "ANTHROPIC_MODEL": "模型名"
+  }
+}
+EOF
+chmod 600 ~/.claude/settings.json      # 内含密钥，收紧权限
 ```
 
-切换后写入的字段：`ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_MODEL`。
+- `ANTHROPIC_BASE_URL` 必须**内网可达**，否则 agent 无法工作。
+- 若网关用 API Key，把键名换成 `ANTHROPIC_API_KEY`。
+- 也可用环境变量临时覆盖（优先级更高）：`export ANTHROPIC_BASE_URL=...`
 
-> **离线安装 ≠ 离线调用模型**：请把 `ANTHROPIC_BASE_URL` 指向**内网可达的网关或代理**。
-> 直接手工编辑 `~/.claude/settings.json` 也可以，不装 ccswitch 同样能用。
+> **离线安装 ≠ 离线调用模型**。安装全程零联网，但运行时要能连上你配置的端点。
 
 ## 五、常用参数
 
 ```bash
-bash install-offline.sh --no-ccswitch    # 只装 Claude Code
-bash install-offline.sh --link           # 省 255MB（符号链接，但离线包不能删）
-bash install-offline.sh --system-glibc   # 不用随身运行时（改用目标机 glibc）
+bash install-offline.sh --link           # 省 272MB（符号链接，但离线包不能删）
+bash install-offline.sh --system-glibc   # 不用随身运行时（改用目标机 glibc，需 ≥2.26）
 bash install-offline.sh --force          # 覆盖已安装（会先备份）
 bash install-offline.sh --no-path        # 不改 shell rc
 ```
@@ -100,44 +109,40 @@ bash install-offline.sh --no-path        # 不改 shell rc
 ## 六、安装位置（全部在 $HOME 下）
 
 ```
-~/.local/share/claude/            # Claude Code 二进制 + 随身运行时
-~/.local/share/ccswitch-cli/      # Node + ccswitch-tui + 随身运行时
-~/.local/bin/claude               # 启动器（用自带 loader 拉起）
-~/.local/bin/ccswitch             # 启动器
-~/.claude.json                    # installMethod=native, autoUpdates=false
-~/.claude/settings.json           # 模型端点与 Key（ccswitch 写入）
-~/.ccswitch-cli/providers.json    # ccswitch 的供应商库
+~/.local/share/claude/versions/2.1.302   # 二进制 272.6 MB
+~/.local/share/claude/runtime/           # 随身运行时（5.9 MB）
+~/.local/bin/claude                      # 启动器（#!/bin/sh）
+~/.claude.json                           # installMethod=native, autoUpdates=false
+~/.claude/settings.json                  # 模型端点与 Key（需自行创建）
 ```
 
-安装后实测占用：`~/.local/share/claude` **261 MB**、`~/.local/share/ccswitch-cli` **136 MB**，合计 **396 MB**。
+安装后实测占用：**279 MB**（含 5.9 MB 运行时）。
 
 ## 七、卸载
 
 ```bash
 rm -rf ~/.local/share/claude ~/.local/bin/claude ~/.claude.json
-rm -rf ~/.local/share/ccswitch-cli ~/.local/bin/ccswitch
-# 再删掉 ~/.bashrc 里 "# >>> claude-code >>>" 与 "# >>> ccswitch >>>" 两个标记块
+# 若还想清掉模型配置（含 API Key）：
+# rm -rf ~/.claude
+# 再删掉 ~/.bashrc 里 "# >>> claude-code >>>" ~ "# <<< claude-code <<<" 之间的行
 ```
 
 ## 八、注意事项
 
-1. **ccswitch-tui 只支持 Claude Code 与 Codex**，不含 OpenClaw。给 OpenClaw 配模型请直接编辑
-   `~/.openclaw/openclaw.json`。
-2. `claude` 首次交互运行会尝试登录 Anthropic 官方账号；内网请改用 API Key + 自建 `BASE_URL`。
-3. 随身运行时只解决 **glibc 版本**问题，不改变架构与内核要求（x86_64、内核 ≥ 2.6.32）。
-4. 已自动写入 `DISABLE_AUTOUPDATER=1` 与 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`，避免离网反复重试。
-5. **升级已有安装**：`bash install-offline.sh --force` 会先备份旧目录再装新版；
-   模型配置（`~/.claude/settings.json`）与 ccswitch 供应商库（`~/.ccswitch-cli/`）不受影响、
-   会被继续沿用，无需重新配置。
+1. `claude` 首次交互运行会尝试登录 Anthropic 官方账号；内网请改用 API Key + 自建 `BASE_URL`。
+2. 随身运行时只解决 **glibc 版本**问题，不改变架构与内核要求（x86_64、内核 ≥ 2.6.32）。
+3. 已自动写入 `DISABLE_AUTOUPDATER=1` 与 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`，避免离网反复重试。
+4. **升级已有安装**：`bash install-offline.sh --force` 会先备份旧目录再装新版；
+   模型配置（`~/.claude/settings.json`）不受影响、会被继续沿用，无需重新配置。
 
 ## 九、分批传输（如介质/上传有大小限制）
 
 ```bash
 # 发送端
-split -b 90M -d claude-offline-2.1.300-linux-x86_64.tar.gz cc.part.
+split -b 90M -d claude-offline-2.1.302-linux-x86_64.tar.gz cc.part.
 # 接收端
-cat cc.part.* > claude-offline-2.1.300-linux-x86_64.tar.gz
-sha256sum -c claude-offline-2.1.300-linux-x86_64.tar.gz.sha256
+cat cc.part.* > claude-offline-2.1.302-linux-x86_64.tar.gz
+sha256sum -c claude-offline-2.1.302-linux-x86_64.tar.gz.sha256
 ```
 
 ---
