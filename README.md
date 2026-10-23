@@ -2,17 +2,17 @@
 
 内网离线安装包：**Claude Code（仅本体）**，无 root、无网络、零系统库依赖。
 
-> **本次版本：Claude Code `2.1.300` → `2.1.302`**
-> **本版不再打包 ccswitch-tui**（模型配置请直接写 `~/.claude/settings.json`，见第四节）
+> **本次版本：Claude Code `2.1.302` → `2.1.309`**
+> 本包只含 Claude Code 本体；模型配置直接写 `~/.claude/settings.json`（见第四节）
 
 | 文件 | 说明 |
 |---|---|
-| `claude-offline-2.1.302-linux-x86_64.tar.gz` | 完整离线包（**128 MB**，解包后 282 MB） |
-| `claude-offline-2.1.302-linux-x86_64.tar.gz.sha256` | 校验和 |
+| `claude-offline-2.1.309-linux-x86_64.tar.gz` | 完整离线包（**130.7 MB**，解包后 290 MB） |
+| `claude-offline-2.1.309-linux-x86_64.tar.gz.sha256` | 校验和 |
 | `README.md` | 本文件 |
 
 ```
-sha256 = 5ea36ff0fbf566e00f20f0f5dc8cd0b6495225037042d9200f45981ebbe372f8
+sha256 = e17ec95169e99212afcd701293f9b25e08e9095f676618e202e90ad3cf86f3cf
 ```
 
 **归档内部**（解包后可见）：`README.md`（完整文档：依赖审计/验证记录/故障排查/重建方法）、
@@ -24,15 +24,15 @@ sha256 = 5ea36ff0fbf566e00f20f0f5dc8cd0b6495225037042d9200f45981ebbe372f8
 
 | 组件 | 版本 | 来源与校验 |
 |---|---|---|
-| **Claude Code** | 2.1.302（原生二进制，272.6 MB） | `downloads.claude.ai`，sha256 `60d7eb7f…29a5` **与官方 manifest 一致** |
+| **Claude Code** | 2.1.309（原生二进制，279.9 MB） | `downloads.claude.ai`，sha256 `4d704a8a…b658` **与官方 manifest 一致** |
 | **随身运行时** | glibc 2.31 + libstdc++ 10.2.1 + libgcc_s（5.9 MB） | Debian 11 同源三件套 |
 
 ```
-Claude Code sha256 = 60d7eb7f12fbb28a52533fe8be5884097403562aa02dc73991a021c7067e29a5
-            size   = 285,793,528 bytes
+Claude Code sha256 = 4d704a8aecbe038affa3000f498ae17c1b4f753add8facb8764120affc99b658
+            size   = 293,469,552 bytes
 ```
 
-> 二进制由上一版的 255 MB 增至 **272.6 MB**。
+> 二进制由上一版的 272.6 MB 增至 **279.9 MB**。
 
 ## 二、目标机要求
 
@@ -56,10 +56,10 @@ Claude Code sha256 = 60d7eb7f12fbb28a52533fe8be5884097403562aa02dc73991a021c7067
 
 ```bash
 # 1) 校验
-sha256sum -c claude-offline-2.1.302-linux-x86_64.tar.gz.sha256
+sha256sum -c claude-offline-2.1.309-linux-x86_64.tar.gz.sha256
 
 # 2) 解包（顶层单目录 claude-offline/，不会散落）
-tar -xzf claude-offline-2.1.302-linux-x86_64.tar.gz
+tar -xzf claude-offline-2.1.309-linux-x86_64.tar.gz
 cd claude-offline
 
 # 3) 安装
@@ -70,12 +70,12 @@ bash install-offline.sh
 
 ```bash
 source ~/.bashrc
-claude --version      # 期望：2.1.302 (Claude Code)
+claude --version      # 期望：2.1.309 (Claude Code)
 ```
 
 ## 四、配置模型端点
 
-本包不再包含供应商切换工具，直接写 `~/.claude/settings.json`：
+直接写 `~/.claude/settings.json`：
 
 ```bash
 mkdir -p ~/.claude
@@ -100,7 +100,7 @@ chmod 600 ~/.claude/settings.json      # 内含密钥，收紧权限
 ## 五、常用参数
 
 ```bash
-bash install-offline.sh --link           # 省 272MB（符号链接，但离线包不能删）
+bash install-offline.sh --link           # 省 280MB（符号链接，但离线包不能删）
 bash install-offline.sh --system-glibc   # 不用随身运行时（改用目标机 glibc，需 ≥2.26）
 bash install-offline.sh --force          # 覆盖已安装（会先备份）
 bash install-offline.sh --no-path        # 不改 shell rc
@@ -109,14 +109,14 @@ bash install-offline.sh --no-path        # 不改 shell rc
 ## 六、安装位置（全部在 $HOME 下）
 
 ```
-~/.local/share/claude/versions/2.1.302   # 二进制 272.6 MB
+~/.local/share/claude/versions/2.1.309   # 二进制 279.9 MB
 ~/.local/share/claude/runtime/           # 随身运行时（5.9 MB）
 ~/.local/bin/claude                      # 启动器（#!/bin/sh）
 ~/.claude.json                           # installMethod=native, autoUpdates=false
 ~/.claude/settings.json                  # 模型端点与 Key（需自行创建）
 ```
 
-安装后实测占用：**279 MB**（含 5.9 MB 运行时）。
+安装后实测占用：**286 MB**（含 5.9 MB 运行时）。
 
 ## 七、卸载
 
@@ -139,10 +139,10 @@ rm -rf ~/.local/share/claude ~/.local/bin/claude ~/.claude.json
 
 ```bash
 # 发送端
-split -b 90M -d claude-offline-2.1.302-linux-x86_64.tar.gz cc.part.
+split -b 90M -d claude-offline-2.1.309-linux-x86_64.tar.gz cc.part.
 # 接收端
-cat cc.part.* > claude-offline-2.1.302-linux-x86_64.tar.gz
-sha256sum -c claude-offline-2.1.302-linux-x86_64.tar.gz.sha256
+cat cc.part.* > claude-offline-2.1.309-linux-x86_64.tar.gz
+sha256sum -c claude-offline-2.1.309-linux-x86_64.tar.gz.sha256
 ```
 
 ---
