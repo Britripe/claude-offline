@@ -2,21 +2,21 @@
 
 内网离线安装包：**Claude Code（仅本体）**，无 root、无网络、零系统库依赖。
 
-> **本次版本：Claude Code `2.1.312` → `2.1.314`**
+> **本次版本：Claude Code `2.1.314` → `2.1.316`**
 > 本包只含 Claude Code 本体；模型配置直接写 `~/.claude/settings.json`（见第五节）
 
 | 文件 | 说明 |
 |---|---|
-| `claude-offline-2.1.314-linux-x86_64.tar.gz` | 完整离线包（**135 MB**，解包后 294 MB） |
-| `claude-offline-2.1.314-linux-x86_64.tar.gz.sha256` | 校验和 |
+| `claude-offline-2.1.316-linux-x86_64.tar.gz` | 完整离线包（**149 MB**，解包后 323 MB） |
+| `claude-offline-2.1.316-linux-x86_64.tar.gz.sha256` | 校验和 |
 | `README.md` | 本文件 |
 
 ```
-sha256 = ef3def3d46fe83f48c880374782545d132540808d4fdb8a44813fd2c932d46ff
+sha256 = e6b930d1506820d2420e715d1b6e06f673b93922a68ecc473de0ed6bd1951d2a
 ```
 
-**归档内部**（解包后可见）：`README.md`（完整文档）、`UNPACK-FIRST.md`（速查）、
-2 个安装脚本、构建脚本、官方 `manifest.json`、随身运行时及其来源 `.deb`。
+**归档内部**：`README.md`（完整文档）、`UNPACK-FIRST.md`（速查）、2 个安装脚本、
+构建脚本、官方 `manifest.json`、随身运行时及其来源 `.deb`。
 
 ---
 
@@ -24,48 +24,65 @@ sha256 = ef3def3d46fe83f48c880374782545d132540808d4fdb8a44813fd2c932d46ff
 
 | 组件 | 版本 | 来源与校验 |
 |---|---|---|
-| **Claude Code** | 2.1.314（原生二进制，284.4 MB） | 官方 CDN 产物，sha256 `4487042b…4594` **与官方 manifest 完全一致** |
+| **Claude Code** | 2.1.316（原生二进制，313.1 MB） | 官方 CDN 产物，sha256 `fd13c700…d824` **与官方 manifest 完全一致** |
 | **随身运行时** | glibc 2.31 + libstdc++ 10.2.1 + libgcc_s（5.9 MB） | Debian 11 同源三件套 |
 
 ```
-Claude Code sha256 = 4487042b4c4f5d88d4568f68ae98aae0b1ffae58864cf57fb868641bc5f84594
-            size   = 298,229,464 bytes
+Claude Code sha256 = fd13c70000fec3f2116dfbcbb6121210b4a29328bf0e46210a59dd594a67d824
+            size   = 328,262,000 bytes
 ```
 
-> **下载方式**：国内镜像高速获取（15 MB/s，约 9 秒），下载后**按官方 manifest 逐字节校验通过**，
-> 并随包附带官方 `manifest.json`。快路下载 + 官方校验，两者互证。
+> **下载方式**：国内镜像高速获取（23.8 MB/s，6 秒），再**按官方 manifest 逐字节校验通过**，
+> 并随包附带官方 `manifest.json`（1,965 B）。
+> 注意：本版二进制比 2.1.314 **增大 30 MB**（298 → 328 MB），属正常体积增长。
 
-## 二、本版更新要点（2.1.314）
+## 二、本版更新要点（2.1.316）
 
-### 与你（内网 + 自建网关 + 关遥测）最相关 —— 8 条
+> 官方 changelog 无独立的 2.1.315 段，版本从 2.1.314 直接到 2.1.316。
+
+### 与你（内网 + 自建网关 + 私有 CA）最相关 —— 9 条
 
 | # | 变更 | 影响 |
 |---|---|---|
-| 1 | **网关拒绝 beta header 时自动降级重试** | 网关/云厂商按名字拒绝 Claude Code 的 beta header 时，会**去掉该 header 重新发一次**，不再整轮失败 |
-| 2 | **网关不支持 tool search 的 `tool_reference` 时自动重试并记住** | 之前会**反复被拒**；现在只重试一次（不带 tool search），并在会话内记住 |
-| 3 | **网关模型名带点号（如 `claude-opus-4.8`）不再被误判为旧模型** | 之前会算错上下文窗口、输出上限、effort、思考模式和成本 —— 自建网关命名常带点号，**这条很关键** |
-| 4 | **空闲压缩扩展到「关闭遥测」和网关场景** | 之前只给开了遥测的订阅用户；现在：遥测关闭时也跑，且在 Bedrock/Vertex/Foundry/**LLM 网关**上一小时 prompt cache 生效后也跑 |
-| 5 | **新增 `permissions.blockWritesOutsideWorkingDirectories`** | 开启后 Write/Edit/NotebookEdit **在所有权限模式下**都拒绝工作目录外的路径（内网收紧权限很好用） |
-| 6 | **`claude -p` 启动失败时不再"静默成功"** | 之前会**退出码 0 且无输出**；现在打印错误并退出 1（headless/脚本场景必修） |
-| 7 | **TLS 报 `UNABLE_TO_GET_ISSUER_CERT` 的修复** | 系统证书库里有"续期根证书与旧根交叉签名"时会连不上；内网自建 CA 场景受益 |
-| 8 | **通过 SSH 粘贴图片到 Linux 不再静默失败** | 现在会提示"把文件传过去再粘路径" |
+| 1 | **新增 `CLAUDE_CODE_DISABLE_LOOPED_CROSS_CERT_DROP`** | 保留"互相交叉签名"的系统根证书，**专为私有 CA 需要它的服务器**。内网自建 CA 证书链里存在环形交叉签名时，默认会被丢弃导致握手失败 |
+| 2 | **SSL 证书报错更具体** | 现在会**指出可能原因**（如服务器漏发中间证书）及修法，内网 TLS 排查更省时间 |
+| 3 | **修 `sonnet`/`opus`/`haiku` 在 Vertex/Bedrock 上中途报错** | 账号/区域拿不到最新模型时，改为**回退该家族旧模型**，不再中断会话 |
+| 4 | **修 Claude apps gateway 未校验请求里"每一个"模型名** | 现在逐个对照 `availableModels` / `deniedModels` / `models`，被拦的模型名返回 400 并指明字段 |
+| 5 | **修 `/model <id>` 在模型不被识别时不警告** | 之前会**静默按 200K 上下文**做自动压缩；现在会提示 |
+| 6 | **修 `CLAUDE_CODE_AUTO_MODE_SERVER=1` 被忽略** | 出现在"经代理/LLM 网关且关闭实验性 beta"的会话里 |
+| 7 | **新增 `CLAUDE_CODE_SUBAGENT_EFFORT`** | 单独设定子代理 effort 档位，不再继承主会话 |
+| 8 | **新增 `CLAUDE_CODE_DISABLE_ULTRATHINK`** | 关闭 `ultrathink` 关键字 |
+| 9 | **修 Claude Code 自行退出时遗留 shell 子进程**（Linux/macOS） | 凭证被拒、云会话归档等场景不再留挂起进程 |
 
-### 压缩相关（承接你上次的问题）
+### 稳定性 / 兼容
 
-- **PreCompact hook 输出过大曾导致压缩失败/反复** —— 现在每个 hook 输出截断到 10,000 字符
-- **空闲压缩**（见上条第 4 点）覆盖范围扩大
-- Bedrock 多图会话每轮失败、`/compact` 报 `400 Input is too long` —— 已修（会先丢旧图再压缩）
+- 压缩响应被截断或损坏时网络请求挂死 —— 已修
+- `--restricted` 会话在 Read allow 规则覆盖时仍会外传工作目录外文件 —— 已修（安全）
+- 含不可见字符的提示词需要按两次回车 —— 已修
+- 子代理继承"父级子代理模型"后被唤醒会跳到主模型 —— 已修
+- Bash 工具：别名值含换行、函数名以 `-` 开头被破坏 —— 已修
+- Bash 工具：导出 `SHELLOPTS` 时脚本"只跑第一条命令就停" —— 已修
+- Windows：Git Bash 设 `errexit`+`pipefail` 时丢别名/函数 —— 已修
+- Windows：Grep/Glob 在搜索进程被超时杀掉但未退出时永不返回 —— 已修
+- 恢复会话时偶发未还原 plan —— 已修
 
-### 其他值得知道的
+### 企业 / 策略
 
-- 长 headless/SDK 多子代理会话的内存占用降低（父会话不再把每个子代理的工具结果留到轮末）
-- `~/.claude/skills/.trash`、`plugins/.trash` 不再无限增长（各保留约 1024 项）
-- 后台 diff 刷新短暂占用 `.git/index.lock` 导致 git 命令报错 —— 已修
-- `--setting-sources` 排除的设置文件仍会漏出部分设置（如 auto 模式规则）—— 已修
-- 沙箱保护对 `claude -p --resume` / `--continue` 进入的 worktree 未生效 —— 已修
-- 组织限制模型 effort 时报 `Invalid effort level` —— 现在会自动降级并说明所用档位
-- `/resume` 列表把 CLAUDE.md 正文当成会话标题 —— 已修
-- 大量 vim 模式、UI、云会话、Slack、Code Review 修复（与本包无关）
+- Team/Enterprise 的 server-managed settings：从 Anthropic API 拉取的设置**不再需要批准提示**；已存副本校验失败则拒绝使用
+- `autoMode.allow` 未写 `"$defaults"` 时不再被塞回内置例外规则
+- Claude apps gateway：`managed.policy_mode: layered`（多层策略叠加）、分组 `pooled_budget`（团队共享月度预算）、`guardrail.input_tagging`
+- `claude auth login` 在托管设置要求走 gateway 时不再拒绝运行（终端里显示 gateway 登录）
+
+### 性能 / 体验
+
+- `/diff` 在超大仓库：每次刷新少跑一次全仓 git 命令；git 慢时自动拉长刷新间隔
+- `/code-review` 在云/remote-control 会话显示 findings 卡片
+- 大量 VSCode / 云会话 / Slack / Code Review 修复（与本包无关）
+
+### ⚠️ 弃用提醒
+
+**Opus 4.8 的 fast mode 自 2026-10-30 起弃用，2026-11-30 移除**；移除后 Opus 4.8 的 fast 请求
+直接报错且**不回落**标准模式。需要加速请迁移到 **Opus 5.5**。
 
 ## 三、目标机要求
 
@@ -88,10 +105,10 @@ Claude Code sha256 = 4487042b4c4f5d88d4568f68ae98aae0b1ffae58864cf57fb868641bc5f
 
 ```bash
 # 1) 校验
-sha256sum -c claude-offline-2.1.314-linux-x86_64.tar.gz.sha256
+sha256sum -c claude-offline-2.1.316-linux-x86_64.tar.gz.sha256
 
 # 2) 解包（顶层单目录 claude-offline/）
-tar -xzf claude-offline-2.1.314-linux-x86_64.tar.gz
+tar -xzf claude-offline-2.1.316-linux-x86_64.tar.gz
 cd claude-offline
 
 # 3) 安装
@@ -100,7 +117,7 @@ bash install-offline.sh
 
 ```bash
 source ~/.bashrc
-claude --version      # 期望：2.1.314 (Claude Code)
+claude --version      # 期望：2.1.316 (Claude Code)
 ```
 
 ## 五、配置模型端点
@@ -121,14 +138,13 @@ chmod 600 ~/.claude/settings.json      # 内含密钥，收紧权限
 
 - `ANTHROPIC_BASE_URL` 必须**内网可达**。
 - 若网关用 API Key，键名换成 `ANTHROPIC_API_KEY`。
-- 若网关模型名带点号（如 `claude-opus-4.8`），本版已修复其上下文/输出上限的误判。
 
 > **离线安装 ≠ 离线调用模型**。
 
 ## 六、常用参数
 
 ```bash
-bash install-offline.sh --link           # 省 284MB（符号链接，但离线包不能删）
+bash install-offline.sh --link           # 省 313MB（符号链接，但离线包不能删）
 bash install-offline.sh --system-glibc   # 用目标机 glibc（需 ≥2.26）
 bash install-offline.sh --force          # 覆盖已安装（会先备份）
 bash install-offline.sh --no-path        # 不改 shell rc
@@ -137,14 +153,14 @@ bash install-offline.sh --no-path        # 不改 shell rc
 ## 七、安装位置（全部在 $HOME 下）
 
 ```
-~/.local/share/claude/versions/2.1.314   # 二进制 284.4 MB
+~/.local/share/claude/versions/2.1.316   # 二进制 313.1 MB
 ~/.local/share/claude/runtime/           # 随身运行时（5.9 MB）
 ~/.local/bin/claude                      # 启动器（#!/bin/sh）
 ~/.claude.json                           # installMethod=native, autoUpdates=false
 ~/.claude/settings.json                  # 模型端点与 Key（需自行创建）
 ```
 
-安装后实测占用：**291 MB**（含 5.9 MB 运行时）。
+安装后实测占用：**319 MB**（含 5.9 MB 运行时）。
 
 ## 八、卸载
 
@@ -160,17 +176,16 @@ rm -rf ~/.local/share/claude ~/.local/bin/claude ~/.claude.json
 2. 随身运行时只解决 **glibc 版本**问题，不改变架构与内核要求（x86_64、内核 ≥ 2.6.32）。
 3. 已自动写入 `DISABLE_AUTOUPDATER=1` 与 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`。
 4. **升级**：`bash install-offline.sh --force`（先备份旧目录），`~/.claude/settings.json` 会沿用。
-5. 想禁止写工作目录以外的文件，可在 `settings.json` 加
-   `"permissions": { "blockWritesOutsideWorkingDirectories": true }`（本版新增）。
+5. 私有 CA 环境下若遇证书链问题，试 `export CLAUDE_CODE_DISABLE_LOOPED_CROSS_CERT_DROP=1`（本版新增）。
 
 ## 十、分批传输
 
 ```bash
 # 发送端
-split -b 90M -d claude-offline-2.1.314-linux-x86_64.tar.gz cc.part.
+split -b 90M -d claude-offline-2.1.316-linux-x86_64.tar.gz cc.part.
 # 接收端
-cat cc.part.* > claude-offline-2.1.314-linux-x86_64.tar.gz
-sha256sum -c claude-offline-2.1.314-linux-x86_64.tar.gz.sha256
+cat cc.part.* > claude-offline-2.1.316-linux-x86_64.tar.gz
+sha256sum -c claude-offline-2.1.316-linux-x86_64.tar.gz.sha256
 ```
 
 ---
