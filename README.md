@@ -2,112 +2,127 @@
 
 内网离线安装包：**Claude Code（仅本体）**，无 root、无网络、零系统库依赖。
 
-> **本次版本：Claude Code `2.1.323` → `2.1.325`**
-> （中间 2.1.324 无独立 changelog，属短命发布）
+> **本次版本：Claude Code `2.1.325` → `2.1.327`**（含 2.1.326 + 2.1.327 两版内容）
 > 本包只含 Claude Code 本体；模型配置直接写 `~/.claude/settings.json`（见第五节）
 
 | 文件 | 说明 |
 |---|---|
-| `claude-offline-2.1.325-linux-x86_64.tar.gz` | 完整离线包（**165 MB**，解包后 359 MB） |
-| `claude-offline-2.1.325-linux-x86_64.tar.gz.sha256` | 校验和 |
+| `claude-offline-2.1.327-linux-x86_64.tar.gz` | 完整离线包（**168 MB**，解包后 365 MB） |
+| `claude-offline-2.1.327-linux-x86_64.tar.gz.sha256` | 校验和 |
 | `README.md` | 本文件（**含完整更新说明**） |
 
 ```
-sha256 = c9218ef269599cfad944077549e958e0356a1f5c897700ac96455a0204541003
+sha256 = d8b42e5f5dda79d1df4fe23798e4fa3d76af4afc7a51eae71343b311dae203da
 ```
 
 ---
 
-# 第一部分：更新说明（2.1.323 → 2.1.325）
+# 第一部分：更新说明（2.1.325 → 2.1.327）
 
-## ⚠️ 最重要：一条会影响无人值守流程的行为变更
+> 两版合计条目极多（300+），以下是**按你的使用场景筛过**的要点。
 
-> **沙箱化的 Bash 命令默认改为走正常权限流程**（也就是会询问）。
->
-> | 想要 | 做法 |
-> |---|---|
-> | 保持"沙箱内免提示直接跑" | `sandbox.autoAllowBashIfSandboxed: true` |
-> | 用托管设置开沙箱 | 必须把该项写进**最高优先级的托管来源** |
+## ⭐ 与你（内网网关 / 关遥测 / 无头）最相关 —— 6 条
 
-**相关连带变更（都会增加"被询问"的机会）：**
-
-1. 只读 git 命令在**不属于本项目/未信任的仓库**里改为先询问（用 `--add-dir` 点名可免提示）
-2. 定时任务与 `/loop` 在运行声明了 `allowed-tools` 或 hooks 的**技能**前会先询问（无人值守就把 `Skill(name)` 加进 `permissions.allow`）
-3. Desktop / IDE / SDK 的「Always allow」只在"保存后确实能免提示"时才单独提供规则
-
-## 一、安全修复
-
-| # | 修复 |
-|---|---|
-| 1 | **zstd 压缩响应的解码方式存在安全问题** —— 已修（changelog 第一条） |
-| 2 | **Bash 权限检查存在缺口：部分复合命令可未经询问直接运行** → 现在会询问 |
-| 3 | **Bash allow 规则可能运行与规则同名的另一个程序** → 已修 |
-| 4 | **部分 deny / ask 规则未作用于某些 Bash 命令** → 已修 |
-| 5 | 沙箱命令**能写入原生更新器的下载目录** → 已修 |
-| 6 | 沙箱**未完全保护 worktree 的设置与 hooks** → 已修 |
-| 7 | 沙箱**未完全保护 linked worktree 的共享 git 目录** → 已修 |
-| 8 | 沙箱现在**同样拒绝写入 added 目录里的 `.claude`**（设置/技能/agents/commands/hooks） |
-| 9 | Claude Code 自己启动的沙箱辅助程序（网络桥）**不再携带登录令牌/API Key** |
-| 10 | ripgrep、本地 git、沙箱运行时助手**不再携带 mTLS 客户端私钥口令** |
-| 11 | 账号邮箱检查**扩展到脚本、文件写入、WebFetch 与 MCP 调用** |
-| 12 | 提交进 git 的 `.claude/settings.local.json` 在**某些子目录启动时被误当作你自己的设置** → 已修 |
-| 13 | 相对路径 deny/ask 规则（如 `Read(./.env)`）**在 `cd` 之后失效** → 现在也作用于 added 目录 |
-| 14 | `mcp__plugin_*_` 开头的 deny/ask 规则**大小写不一致时漏判** → 已修 |
-| 15 | 插件加载会**跳过不安全的路径与符号链接**，`plugin validate` 也会报告 |
-
-## 二、与你网关环境最相关的 3 条 ⭐
-
-| # | 变更 | 为什么重要 |
+| # | 变更 | 影响 |
 |---|---|---|
-| 1 | **修「很多第三方网关与 Foundry 上每轮都报 context length 错误而不是压缩」** | **直接对应你的自建网关** —— 之前会卡死在上下文超限 |
-| 2 | **`CLAUDE_CODE_MAX_CONTEXT_TOKENS` 现在也作用于以 `claude-` 开头的未识别模型 ID**（如网关的 `claude-sonnet-latest`） | 承接上版"未识别模型按 1M 估算"，现在可精确控制 |
-| 3 | 修子代理按**主会话模型**计算文件读取与 MCP 结果大小（子代理模型不同时算错） | 子代理上下文预算更准 |
+| 1 | **修「关遥测、以及 Bedrock / Vertex / Foundry 上的压缩，有时不是摘要而是回复了你某条消息，或漏掉 Claude 最后一条回复」** | **直接命中你的配置**（关遥测 + 网关）：之前压缩可能把会话搞坏 |
+| 2 | **修后台会话丢失 shell 导出的 LLM 网关配置**（崩溃后、从别的目录重开、后台服务没有该变量）—— 现在会在任何模型请求前就停下 | 后台/常驻会话不再悄悄走错端点 |
+| 3 | **修项目 `.claude/settings.json` 把 `ANTHROPIC_BASE_URL` 指向网关时 `/model` 列出错误的模型** | 网关 + 项目级配置组合 |
+| 4 | **修「家目录或配置目录经符号链接指向 `/net` 且沙箱设置拒绝读取时，沙箱命令无法启动」** | NFS / autofs / 符号链接家目录 |
+| 5 | **未识别模型的长回复：被截在 32,000 输出 token 时会以 128,000 上限继续** | 自定义模型名的长输出不再半截 |
+| 6 | **auto 模式的提示改为预告：下个版本会移除「回退到计费分类器」** —— 之后每个本该检查的动作都会被询问或拒绝 | **提前准备**：要么接受询问，要么配好允许规则 |
 
-## 三、Linux / 家目录 / 文件系统
+## ⚠️ 行为变更（可能影响现有脚本）
+
+| # | 变更 |
+|---|---|
+| 1 | **沙箱命令默认不再写入若干敏感家目录**；需要时用 `sandbox.filesystem.allowWrite` 放行 |
+| 2 | **沙箱开启时会先询问"设置环境变量的命令行"**（auto-allow 关闭时）；无人值守场景会被拒绝 → 需要放行规则 |
+| 3 | **未设置模式时会话可能以 auto 模式启动**（原本是 Manual），当组织策略尚未载入时 |
+| 4 | 路径检查**开始拒绝部分符号链接**；"什么算工作目录之内"重新界定，**部分路径现在会要求授权** |
+| 5 | `permissions.blockReadsOutsideWorkingDirectories` 在 bypass/auto 模式下**对更多 Bash 命令改为询问或拒绝** |
+| 6 | Bash 命令里**变量展开成超长文本会被拒绝**（提示改用短值或文件） |
+| 7 | Auto 模式**忽略更多"能跑任意包"的允许规则**（如 `Bash(pnpm dlx *)`、`/usr/bin/npm run:*`） |
+| 8 | `ExitWorktree` 在 worktree 可能还有未保存工作时**会先询问** |
+| 9 | 子代理被同级消息唤醒后**遵循会话的权限设置**（可能询问，或无人可答时被拒） |
+| 10 | PowerShell 工具**对更多命令改为询问**（即使有指名规则；无人可答时拒绝） |
+| 11 | `--add-dir` / `/add-dir` 对**未信任目录会弹信任确认**；`claude --bg` 直接拒绝此类目录 |
+| 12 | Claude 的文件工具**拒绝写入 `.credentials.json` 等登录文件**；Bash 权限检查也会拦更多触及登录文件的命令 |
+
+## 一、安全 / 沙箱加固
+
+| # | 变更 |
+|---|---|
+| 1 | 沙箱在会话中**更倾向于保持状态**（直到你运行 `/sandbox` 或 `/cd`） |
+| 2 | 命令后**会被清出仓库 `.git` 里异常条目** |
+| 3 | Linux/WSL 上**每条沙箱命令前会创建缺失的 `--add-dir` 目录**（依赖"目录不存在"的命令可能失败或落进该目录） |
+| 4 | 权限钩子/SDK 宿主重写过的命令**若原本按沙箱检查，则仍留在沙箱**（可用 `dangerouslyDisableSandbox: true` 例外） |
+| 5 | `claude mcp serve` **忽略** `sandbox.excludedCommands` |
+| 6 | `/rewind` 在开启沙箱时会**跳过部分文件并报告** |
+| 7 | 更多 `cp` / `mv` 命令改为先询问 |
+| 8 | bypass 模式下**部分工具调用改为询问或拒绝** |
+| 9 | 部分文件工具**拒绝设备文件与进程文件** |
+| 10 | 隔离 worktree 的子代理**拒绝部分会重写共享分支的 git 命令** |
+| 11 | 改进 Code Mode 的权限检查（更多沙箱命令会询问/被拒） |
+
+## 二、修复（与你环境相关）
 
 | # | 修复 |
 |---|---|
-| 1 | **Linux：工作目录位于 `denyRead` 内的 `allowRead` 文件夹下时（例如家目录是符号链接），沙箱化 Bash 报 `bwrap: Can't create file`** → 已修 |
-| 2 | 工作目录被删除后 shell 命令仍在**启动目录**执行 → 现在报错，可重新发起 |
-| 3 | 没有 `HOME` 环境变量时 **AWS `credential_process` 与 GCP 默认凭据**失败 → 已修 |
-| 4 | 修 `.oauth_refresh.lock.owner.tmp.*` 残留文件堆积 |
-| 5 | 修 `claude auth status` 等短命令在 Console 配置上**遗留锁**，导致下个会话卡约 1 分钟 |
+| 1 | `grep` 在 Bash 工具里**静默跳过部分文本文件** |
+| 2 | `max_tokens` 超过模型上限时报错 → 现在**用 Anthropic API 报告的最大值重试** |
+| 3 | Vertex 上图片多的会话**卡在 400（请求超 30 MB）** 而不压缩重试 |
+| 4 | 设置文件嵌套数千层**导致崩溃或只有时生效**（超过 64 层的值会丢弃并告警） |
+| 5 | 设置文件保存出错被**静默跳过**（现在告警并指名文件） |
+| 6 | Linux 上沙箱命令中途被停时**留下空占位文件（含 `.git/config.lock`）** |
+| 7 | `cp` 一个文件时**只因源被 `Edit` deny 覆盖就被拒** |
+| 8 | 被拒的 MCP `headersHelper` **让其他会话也起不来该服务器** |
+| 9 | 恢复会话时**丢失最近若干轮**（上次是空回复结束时） |
+| 10 | 恢复会话时**低内存导致丢失更早历史** |
+| 11 | `claude purge` 在 stdout 被重定向时**隐藏提示**（一次看不见的回车可能删掉项目数据）→ 现在显示在终端 |
+| 12 | `claude auth logout` **残留凭据**、令牌刷新失败（仅 Console profile 凭据位于拒绝目录时间戳的盘上时） |
+| 13 | `forceLoginOrgUUID` / `forceRemoteSettingsRefresh` 启动错误在**网络拦截页（HTTP 403）** 时误报"请重新登录" |
+| 14 | 崩溃的 Node/Python hook **只显示栈第一行** → 现在显示错误，Ctrl+O 可看 1 万字符 |
+| 15 | `/rewind` 各种问题（Esc 取消摘要、列表显示、长提示遮挡警告） |
+| 16 | `/diff`、`/status`、`/hooks`、`/mcp`、`/plugin` 等大量 UI 修复 |
 
-## 四、Windows
+## 三、性能改进
 
-- 修 PATH 某条目位于**账号无法打开的文件夹**下时的启动停顿（约 1 秒）
-- 修 `/resume` 在**盘符大小写或斜杠写法不同**时拒绝/隐藏会话
-- 修会话内 `/resume` 因盘符大小写不同**丢掉项目的已保存信任**
+- **首条 Bash 命令更快**（shell 启动文件可能在批准前就运行；`CLAUDE_CODE_DISABLE_SHELL_HEAD_START=1` 可关）
+- Windows：**PowerShell 每条命令快约半秒**；有/无 Git Bash 的启动都更快
+- 输入、流式输出、resize 响应更快（长会话更明显）
+- 读/写文件后的响应更快（Windows 最明显）
+- **空闲 CPU 更低**（空闲会话唤醒机器更少）
+- 20+ 子代理时的 CPU 降低（后台代理 token 每 5 秒更新）
+- `/compact` 后 git 仓库里首条消息更快
+- 超长会话恢复更可靠（transcript 读到提前结束会重试一次）
+- `/update-config` 终端内上下文从 93,000 token 降到约 13,000
 
-## 五、headless / SDK / 认证
+## 四、新功能 / 新开关
 
-- 修 `-p` 在**终端**输出时放行非文本样式的控制序列（管道与文件输出不变）
-- 修 `-p` 在没有缓存账号数据时**先等数据**再发首个请求（干净环境首次启动可能慢几秒）
-- 修 Agent SDK `applyFlagSettings()` 里**一个非法值会静默丢弃之前所有设置** → 现在直接报错拒绝
-- `claude remote-control` 退出码改进：自行停止 **4**、无法注册 **69**（便于服务管理器重启）
-- 修背景会话**误用并计费**启动它的 shell 里的 API Key（本应走 claude.ai 登录）
-- 更多"后台会话切换到别的登录"的情况现在**被拒绝并说明**
+| 项 | 说明 |
+|---|---|
+| `CLAUDE_CODE_DISABLE_SHELL_HEAD_START=1` | 关闭"首条 Bash 命令提前启动 shell" |
+| `OTEL_RESOURCE_INCLUDE_HOST` | 在 OTel 资源属性里加入 `host.name` / `host.id`（默认关） |
+| Code Mode | 现在**可与 agent teams 同时开启**；已在用 Code Mode 的团队会话直接以 Code Mode 启动 |
+| `--allowedTools` / `--disallowedTools` / `--tools` | 值不像完整规则时**启动告警** |
+| `/status` 新增一行 | 说明**提供商或 `DISABLE_TELEMETRY` 等环境变量关掉了哪些功能** |
+| Ctrl+O | 显示**被隐藏的启动提示** |
+| `/plugin` | 显示被忽略的畸形 `plugin.json` 字段（如 `author`、`homepage`） |
 
-## 六、MCP
+## 五、其他值得知道的
 
-- 修 MCP 服务器在**一次被暂时拒绝的令牌刷新**后一直显示"需要认证"，且 `mcp_tool` hooks 被跳过
-- 修 SDK 宿主在工具调用重连 MCP 后返回 "Not connected"
-- 修**后台 MCP 任务**在其它调用导致连接丢失后停止更新
-- 修后台 MCP 任务的问题框**打断正在输入的消息**（改为等你发送或清空草稿）
-- 修 `/mcp` 在插件重载后仍列出已被移除的 MCP 服务器
-- 修 `worktree.sparsePaths` 与稀疏插件克隆在**老 git（如 2.34）**上漏掉仓库根文件
-
-## 七、其他变更要点
-
-- 组织策略阻止请求时，错误下方新增一行提示：用 `/rewind` 改消息或用 `/clear`
-- 沙箱化的 `git checkout` / `git stash` / autostash pull 无法更新 `.claude` 等受保护文件时会告知 Claude
-- `/cost`、`$.session.usage()`、`--max-budget-usd` 现在也统计 mod 的 `$.model.complete` / `$.model.classify` 调用
-- 插件市场下载在**只设了 `ALL_PROXY`** 时改用 CONNECT 隧道（拒绝 CONNECT 的代理会失败）
-- `-p`/SDK 在挂进容器的 worktree / submodule 里，`.claude/settings.local.json` 的 allow 规则**要等目录被信任后**才生效
-- `/login` 现在会**先征求同意**再改动隐私设置
-- 自托管 runner 拒绝会话目录或仓库路径是**符号链接**的会话（除 `checkout` hook 的检出）
-- 新增：Claude 读过/改过 Jupyter notebook 后，VS Code 等终端会显示一条"重跑单元格"提示
-- 大量 VS Code / Claude Code on the web / Claude Tag 修复（与本包无关）
+- 新模型上提交时，Claude 被告知**不要提交可能含机密的文件**
+- 沙箱豁免的命令**若因依赖沙箱而仍留在沙箱内，Claude 现在能看到**
+- 没有 `rm` 但被旧检查判为"危险 rm"的命令，**改进提示**让 Claude 改用普通语法重发
+- **子代理进度摘要**在 Bedrock / Vertex / Foundry 上改用短笔记生成（省大量 token）
+- 非交互（`-p`）模式**首个请求前执行的 git 命令更少**
+- Remote Control：通过代理时改用 **CONNECT 隧道**（代理拒绝 CONNECT 会报错停止）
+- 团队共享预算用尽时**告知重置时间**
+- `CERT_SIGNATURE_FAILURE` 连接错误**给出 CA 续期后的可能原因与 IT 可改项**
+- 大量终端渲染 / 全屏 / 窄终端 / 主题可读性 / 键位提示 / 对话框一致性改进
+- `claude plugin`、`mcp`、`update`、`doctor`、`auth logout` 终端输出**统一成功/失败/警告标记**
+- VSCode：新增「Add to Chat」右键菜单；启动更快；多项修复
 
 ---
 
@@ -117,12 +132,12 @@ sha256 = c9218ef269599cfad944077549e958e0356a1f5c897700ac96455a0204541003
 
 | 组件 | 版本 | 来源与校验 |
 |---|---|---|
-| **Claude Code** | 2.1.325（原生二进制，348.9 MB） | 官方 CDN 产物，sha256 `0dc4f4a9…b0cf` **与官方 manifest 完全一致** |
+| **Claude Code** | 2.1.327（原生二进制，355.6 MB） | 官方 CDN 产物，sha256 `343c744b…6ac9` **与官方 manifest 完全一致** |
 | **随身运行时** | glibc 2.31 + libstdc++ 10.2.1 + libgcc_s（5.9 MB） | Debian 11 同源三件套 |
 
 ```
-Claude Code sha256 = 0dc4f4a9a165fc60746d7ae8489712e5fc352f1e7ad4eb22e7141bd0812eb0cf
-            size   = 365,842,960 bytes
+Claude Code sha256 = 343c744baa14bfd38286a7cb90871051f04379956da6c5b803a9e66019a76ac9
+            size   = 372,904,464 bytes
 ```
 
 > **下载方式**：国内镜像获取（首次成功），再**按官方 manifest 逐字节校验通过**，
@@ -149,10 +164,10 @@ Claude Code sha256 = 0dc4f4a9a165fc60746d7ae8489712e5fc352f1e7ad4eb22e7141bd0812
 
 ```bash
 # 1) 校验
-sha256sum -c claude-offline-2.1.325-linux-x86_64.tar.gz.sha256
+sha256sum -c claude-offline-2.1.327-linux-x86_64.tar.gz.sha256
 
 # 2) 解包（顶层单目录 claude-offline/）
-tar -xzf claude-offline-2.1.325-linux-x86_64.tar.gz
+tar -xzf claude-offline-2.1.327-linux-x86_64.tar.gz
 cd claude-offline
 
 # 3) 安装
@@ -161,13 +176,13 @@ bash install-offline.sh
 
 ```bash
 source ~/.bashrc
-claude --version      # 期望：2.1.325 (Claude Code)
+claude --version      # 期望：2.1.327 (Claude Code)
 ```
 
 ## 四、常用参数
 
 ```bash
-bash install-offline.sh --link           # 省 348MB（符号链接，但离线包不能删）
+bash install-offline.sh --link           # 省 355MB（符号链接，但离线包不能删）
 bash install-offline.sh --system-glibc   # 用目标机 glibc（需 ≥2.26）
 bash install-offline.sh --force          # 覆盖已安装（会先备份）
 bash install-offline.sh --no-path        # 不改 shell rc
@@ -191,8 +206,8 @@ chmod 600 ~/.claude/settings.json      # 内含密钥，收紧权限
 
 - `ANTHROPIC_BASE_URL` 必须**内网可达**。
 - 若网关用 API Key，键名换成 `ANTHROPIC_API_KEY`。
-- 自定义模型名默认按 1M 上下文估算；想回 200K 或只想调窗口，加
-  `"CLAUDE_CODE_DISABLE_1M_CONTEXT": "1"` 或 `"CLAUDE_CODE_MAX_CONTEXT_TOKENS": "<数值>"`。
+- 自定义模型名默认按 1M 上下文估算；想回 200K 加 `"CLAUDE_CODE_DISABLE_1M_CONTEXT": "1"`，
+  或精确设定 `"CLAUDE_CODE_MAX_CONTEXT_TOKENS": "<数值>"`。
 - 若用沙箱且想免提示：加 `"sandbox": {"autoAllowBashIfSandboxed": true}`。
 
 > **离线安装 ≠ 离线调用模型**。
@@ -200,14 +215,14 @@ chmod 600 ~/.claude/settings.json      # 内含密钥，收紧权限
 ## 六、安装位置（全部在 $HOME 下）
 
 ```
-~/.local/share/claude/versions/2.1.325   # 二进制 348.9 MB
+~/.local/share/claude/versions/2.1.327   # 二进制 355.6 MB
 ~/.local/share/claude/runtime/           # 随身运行时（5.9 MB）
 ~/.local/bin/claude                      # 启动器（#!/bin/sh）
 ~/.claude.json                           # installMethod=native, autoUpdates=false
 ~/.claude/settings.json                  # 模型端点与 Key（需自行创建）
 ```
 
-安装后实测占用：**355 MB**（含 5.9 MB 运行时）。
+安装后实测占用：**362 MB**（含 5.9 MB 运行时）。
 
 ## 七、卸载
 
@@ -223,17 +238,17 @@ rm -rf ~/.local/share/claude ~/.local/bin/claude ~/.claude.json
 2. 随身运行时只解决 **glibc 版本**问题，不改变架构与内核要求（x86_64、内核 ≥ 2.6.32）。
 3. 已自动写入 `DISABLE_AUTOUPDATER=1` 与 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`。
 4. **升级**：`bash install-offline.sh --force`（先备份旧目录），`~/.claude/settings.json` 会沿用。
-5. **本版起沙箱 Bash 默认会询问** —— 无人值守脚本请先设 `sandbox.autoAllowBashIfSandboxed: true`。
-6. 本版修了 zstd 解码安全问题与多项沙箱保护缺口，建议尽快升级。
+5. **本版压缩 bug 修复对你尤其重要**（关遥测场景下之前可能把会话压坏），建议尽快升级。
+6. 升级后留意"行为变更"章节：沙箱默认写入范围收窄、环境变量命令行会询问等。
 
 ## 九、分批传输
 
 ```bash
 # 发送端
-split -b 90M -d claude-offline-2.1.325-linux-x86_64.tar.gz cc.part.
+split -b 90M -d claude-offline-2.1.327-linux-x86_64.tar.gz cc.part.
 # 接收端
-cat cc.part.* > claude-offline-2.1.325-linux-x86_64.tar.gz
-sha256sum -c claude-offline-2.1.325-linux-x86_64.tar.gz.sha256
+cat cc.part.* > claude-offline-2.1.327-linux-x86_64.tar.gz
+sha256sum -c claude-offline-2.1.327-linux-x86_64.tar.gz.sha256
 ```
 
 ---
