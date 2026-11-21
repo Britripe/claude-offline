@@ -2,98 +2,96 @@
 
 内网离线安装包：**Claude Code（仅本体）**，无 root、无网络、零系统库依赖。
 
-> **本次版本：Claude Code `2.1.327` → `2.1.328`**
+> **本次版本：Claude Code `2.1.328` → `2.1.330`**（含 2.1.329 + 2.1.330 两版）
 > 本包只含 Claude Code 本体；模型配置直接写 `~/.claude/settings.json`（见第五节）
 
 | 文件 | 说明 |
 |---|---|
-| `claude-offline-2.1.328-linux-x86_64.tar.gz` | 完整离线包（**168 MB**，解包后 365 MB） |
-| `claude-offline-2.1.328-linux-x86_64.tar.gz.sha256` | 校验和 |
+| `claude-offline-2.1.330-linux-x86_64.tar.gz` | 完整离线包（**171 MB**，解包后 373 MB） |
+| `claude-offline-2.1.330-linux-x86_64.tar.gz.sha256` | 校验和 |
 | `README.md` | 本文件（**含完整更新说明**） |
 
 ```
-sha256 = b516c89341c753ba1314ab70e64682b86591acc167e00c7d1c676e0e8c1c1ef2
+sha256 = 0feec743c6c26325e921694c0c65681cdb47f6604e39a89529d373a236a066ce
 ```
 
 ---
 
-# 第一部分：更新说明（2.1.327 → 2.1.328）
+# 第一部分：更新说明（2.1.328 → 2.1.330）
 
-> 二进制只增大 0.1 MB，但内容不少：**约 147 条**，其中好几条正中你的配置。
+## ⭐⭐⭐ 与你（网关 + 关遥测 + WSL）最相关的 8 条
 
-## ⭐⭐ 与你（网关 + 关遥测 + 关实验性 beta）最相关 —— 5 条
-
-| # | 修复 | 你的场景 |
+| # | 变更 | 说明 |
 |---|---|---|
-| 1 | **修「设了 `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS`、网关又拒绝 beta 时，auto 模式每轮都失败」**（Bedrock / Agent Platform / Foundry / Claude apps gateway，且不在 Claude Desktop 内） | **直接命中**：之前 auto 模式在你这种配置下会整轮报错 |
-| 2 | **修 `CLAUDE_STREAM_IDLE_TIMEOUT_MS` 在网关、自定义 base URL 和云厂商上没能延长「5 分钟连接上限」** | **直接命中**：内网链路慢时不再 5 分钟被掐 |
-| 3 | **修「MCP 工具的 input schema 以 `anyOf` / `oneOf` / `allOf` 开头时，在第三方提供商或关闭遥测/特性开关的会话里整个工具消失」** | **直接命中**：你关了非必要流量，之前这类 MCP 工具会不见 |
-| 4 | **修「MCP 工具 input schema 非法时使整个请求失败」**（现在只排除该工具并告知 Claude 原因） | 一个坏工具不再拖垮整轮 |
-| 5 | **修「关闭遥测/特性开关时，保存定时任务会把项目其他已保存任务抹掉」**（读不到任务文件时） | **数据丢失**，已修 |
+| 1 | **`max_tokens` 超模型/网关上限时的自动重试：2.1.329 移除 → 2.1.330 恢复** | 净结果是有重试。但若网关后面模型输出上限更小，**建议设 `CLAUDE_CODE_MAX_OUTPUT_TOKENS` = 该上限** |
+| 2 | **未识别模型名里含 "sonnet" 或 "haiku" 的改用精简 system prompt**；`CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT=0` 让所有模型用完整版 | **直接命中你的网关模型名** |
+| 3 | **修「Linux/WSL 上睡眠 ≥2 分钟后，首条提示在已死连接上等 3 分钟」** | 你的网络 + WSL |
+| 4 | **Code Mode 现在在"关遥测 / 关非必要流量 / 关特性开关"时也能启动**（管理员仍可禁用） | 你正好是这个配置 |
+| 5 | **修「关遥测、或经网关访问 Anthropic API、或在 Foundry 上时，auto 模式对 'yes' 这类短回复处理不当」** | 直接命中 |
+| 6 | **修「`~/.claude.json` 在网络卡顿/文件锁导致读不出并在保存时被清空，从而重置为默认值」** | **数据丢失** |
+| 7 | **修「大量 MCP 工具的 input schema 被 API 拒绝时，整轮报 `JSON schema is invalid` 且会话文件涨到几 MB」** | MCP + schema |
+| 8 | **修「WebFetch 摘要忽略 `/effort` 档位（网关拒绝小快模型时）」** | 网关 |
 
 ## ⚠️ 行为变更
 
 | # | 变更 |
 |---|---|
-| 1 | **Bedrock / Agent Platform / Foundry / Claude apps gateway 上的 Opus 4.6、Sonnet 4.6 新增 auto 模式**；**未设权限模式的交互会话会直接以 auto 启动** |
-| 2 | 第三方提供商上 Opus 4.6 / Sonnet 4.6 的 plan 模式与 Bash 提示改为使用并提供 auto 模式（`disableAutoMode` 可关） |
-| 3 | **托管的 `PostToolUse` 钩子不再对「运行前就被拒绝」的调用触发**（不记日志、不改写、不阻断） |
-| 4 | 沙箱无法启动时的报告方式变更：**下一条沙箱化 Bash 命令会被拒绝并说明本会话沙箱已关**（除非设了 `sandbox.failIfUnavailable`） |
-| 5 | 被 `PermissionRequest` 钩子改写为"沙箱豁免"的命令**将在沙箱外运行** |
-| 6 | `CLAUDE_CODE_FORK_SUBAGENT=0` 时子代理默认会等待自己的子代理（可用 `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` 放宽） |
-| 7 | 第三方提供商或关遥测时：**粘贴的文本会被标记为"粘贴"**；关闭时带未回答问题结束会**结束该轮**而不是无答继续 |
-| 8 | 子代理进度摘要在 Anthropic API 上改由**默认小快模型基于短笔记生成**（关遥测也生效），**token 消耗大幅下降** |
+| 1 | **已保存的定时任务：新登录会话中，早期版本保存的大多数需要重新排期**（`--resume` 原会话仍能跑） |
+| 2 | **更多针对根目录 / 家目录 / 顶层目录 / 当前工作目录的 `rm` 改为需审批**；无人可答时直接拒绝 |
+| 3 | 反复定时任务与 `/loop` 现在可跑 **30 天**（原 7 天），结束时告知 |
+| 4 | 网关：`access_control.allow_cidrs` 为空时**每次启动打带框提示：绝不要把网关暴露到公网** |
+| 5 | 部分 teammate 面板改由 `/bin/sh` 启动，**可能不再读取 shell 启动文件** |
+| 6 | Code Mode 里 PreToolUse 钩子报错**不再拒绝脚本的工具调用**；要拒绝请设 `"onFailure": "block"` |
 
-## 一、重要修复
+## 一、压缩相关
 
-| # | 修复 |
-|---|---|
-| 1 | **自动压缩复用了会话早先的 system prompt，而不是像 `/compact` 那样重建** —— 已修 |
-| 2 | **Linux：分支名不是合法 UTF-8 时，Bash 沙箱每条命令后都重命名 `.git/HEAD`** —— 已修 |
-| 3 | **zsh 下 Bash 命令遇到以 `=` 开头的词（如 `echo ====`、`[ a == b ]`）报 not found** —— 已修（`=cmd` 不再展开为路径） |
-| 4 | 极长/畸形 markdown 导致渲染卡死 —— 已修 |
-| 5 | 偶发屏幕冻结 —— 已修 |
-| 6 | 权限提示/提问时紧接着输入导致 **Esc 经常丢失** —— 已修 |
-| 7 | 慢连接把粘贴或终端回复截成两半时**内容被敲进提示框** —— 已修 |
-| 8 | 恢复大会话时**丢失压缩摘要或最近消息**（消息保存晚时）—— 已修 |
-| 9 | spinner 与子代理的 **token 计数把重试的回复算两次**、漏掉未流式回复、思考时不动 —— 已修 |
-| 10 | 用量额度在回复中途耗尽时**错误提示成速率限制** —— 已修 |
-| 11 | 第三方提供商上部分 Claude Desktop 会话在大量工具结果后**永久 "Prompt is too long"** —— 已修（最大的结果会被排除） |
-| 12 | `2.1.327` 引入的回归：Bedrock/Agent Platform/Foundry 拒绝摘要的 effort 设置时，**该子代理模型的 effort 被整会话关掉** —— 已修 |
-| 13 | `FORCE_COLOR` 设为负数时启动崩溃 —— 已修 |
-| 14 | 机器内存将尽时**机密掩码处理崩溃** —— 已修 |
-| 15 | Linux：装 `xclip`/`wl-copy` 时，Ctrl+Z 挂起期间**在其他应用粘贴会冻结** —— 已修 |
-| 16 | Linux：Ctrl+V **拿不到剪贴板图片 / 粘到旧图 / 卡住** —— 已修 |
-| 17 | `/terminal-setup` 在 Zed 里会把符号链接的 `keymap.json` 替换成普通文件 —— 已修 |
+- **修「压缩完超长会话后冻结可达数分钟」**
+- **修「从预热进程启动的会话忽略项目 `.claude/settings.json` 的 `autoCompactWindow`」**
+- **修「`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` 从 settings.json 删除后运行中会话仍生效」**
 
-## 二、Code Mode（实验性）大量修复
+## 二、headless / 脚本
 
-约 15 条，主要有：权限提示/计划审批/提问停留 10 分钟不再中断脚本；auto/bypass 模式下新连上的 MCP 服务器可用；从 `--resume` 选择器恢复时可在后台运行；恢复会话时不再丢失已加载技能/hook 上下文/审批时输入的备注；不再对未定义变量静默用 `undefined`；不再拒绝以 `{` 开头的合法脚本；不再拒绝同时用顶层 `await` 与 `return` 的脚本。
+- **修「`claude -p` 输出到满盘文件时退出码 0 且无任何消息」** → 现在报错退出 1（满 NFS 导出仍可能不报）
+- 修「SessionStart 钩子写入的环境变量在 `claude -p --continue` 时丢失」
+- 修「多个进程同时保存用户设置时改动丢失」
+- 修「磁盘满时保留不完整 `~/.claude.json` 备份、把好备份挤掉」
+- 新增 `CLAUDE_CODE_FULL_SIGN_IN_LINK=1`（短链接出错时打印完整链接）
 
-性能：auto/bypass 模式下**去掉脚本后 0.75 秒停顿**；有 MCP 的会话提示缓存更好；工具描述更短省 token；**运行时显示脚本正在执行的命令与输出**。
+## 三、性能
 
-## 三、新功能 / 新开关
+- 文件 diff 更快
+- **修「Linux 慢仓库（`node_modules` 很大）里 Bash 命令等数秒，且之后整个会话不显示文件 diff」**
+- Windows：Grep/Glob 不再为每次内置 ripgrep 起 console host；启动与首次搜索更快
+- 修「Code Mode 读数百文件后（有路径范围/Read deny 规则时）长时间停顿」
+- **auto 模式减少 `git status` 调用**，大仓库里等待更短
+- 长会话（编辑大量文件）与含大量 MCP 结果的 Desktop 会话内存改善
+
+## 四、新功能
 
 | 项 | 说明 |
 |---|---|
-| `CLAUDE_CODE_DISABLE_DEFERRED_TOOL_RESUME` | 让宿主阻止 `claude -p --resume` / `--continue` 运行被钩子延后的工具调用 |
-| `mcp_tool` 钩子支持 `"onFailure": "block"` | 钩子调用失败即阻断该动作（与命令/HTTP 钩子一致） |
-| `/status` 与 `claude doctor` 新增提示 | OpenTelemetry 导出器没有 endpoint、数据可能丢失时告警 |
-| 跨会话消息提示 | `claude -p` 文本输出会在 stderr 说明消息被扣留/丢弃的原因及如何放行 |
-| 网关启动告警 | 策略的 `maxEffortLevel` 不是合法 effort 档位时告警 |
-| 嵌入方支持 `allowManagedModsOnly` | 管理员托管设置仍优先 |
+| **easel** | 内置图表 mod：被要求画图时、MCP 指标结果下自动出图（Pro/Max，macOS/Linux；`/config` 可关） |
+| Enterprise Admin Console 登录 | `claude auth login` 后自动应用组织设置并使用其云厂商/网关 |
+| `/tasks` 扩展 | 含本会话定时任务、`/loop` 唤醒、goal 与 fork |
+| `/mcp` 新增「Server message」行 | 显示远程 HTTP MCP 服务器拒绝连接的 JSON-RPC 错误 |
+| `/status` 新增「Marketplace auto-update」行 | 说明哪些托管市场不自动更新及原因 |
+| `claude plugin install --json` | 新增 `commandPrinted` / `commandFailed` |
 
-## 四、其他变更
+## 五、其他重要修复
 
-- `/code-review` 在多数模型上**只报 bug 与 CLAUDE.md 违规**（复用/简化请用 `/simplify`）；每条结论标记 **Important / Pre-existing / Nit**，摘要末尾给建议修复
-- `/bug` 改为**先问 Yes/No 再发送**（连按回车不再误发）
-- `/list-agents` 只给你自己看列表
-- 恢复大会话更快；图片多的会话恢复时内存更低
-- 长时间 SDK/桌面会话（跑慢命令/工具）内存与响应改善
-- 同时启动多个 in-process teammate 时 "Lock file is already being held" 大幅减少
-- `claude -p` / SDK 会话会**后台预取**带自己 git 仓库的托管设置插件（首次运行可能晚 ≤30 秒退出）
-- 计算型审批对话框会显示每个应用的访问级别
-- 大量 Remote Control / 云会话 / VS Code / 自托管 runner 修复（与本包无关）
+- **修「状态栏脚本无限输出会冻结提示框并吃掉数 GB 内存」**
+- **修「Code Mode 失控循环把内存吃满」**（现在有上限）
+- 修「MCP 服务器在慢重连后停滞」——多数 HTTP MCP 服务器现在会自动重连（停留旧协议版本时）
+- 修「PDF/图片/`.docx`/`.xlsx`/`.pptx` 以 `application/octet-stream` 发送时被存成 `.bin`，导致读不了」
+- 修「`/code-review <PR号>` 有时审检出分支而非该 PR 且不说明」→ 改用 `gh pr diff`，读不到会说明
+- 修「`forceLoginOrgUUID` 下一次临时服务器错误或连接中断后启动被拒」
+- 修「`/stats` 按 UTC 而非本地时区统计」
+- 修「Jupyter notebook 带 BOM 时被 Read/NotebookEdit 判为非法 JSON」
+- 修「CLAUDE.md / 记忆文件含 HTML 注释时链接引用定义被丢弃」
+- 修「Grep 模式含换行且未开 multiline 时报无匹配」→ 现在报告模式被拒
+- 修「两个用户/项目 agent 文件同名时选哪个取决于搜索顺序」
+- **登录链接大幅缩短**（`/login`、`claude auth login`、`claude setup-token`）
+- 大量 VSCode / Remote Control / 自托管 runner 修复（与本包无关）
 
 ---
 
@@ -103,12 +101,12 @@ sha256 = b516c89341c753ba1314ab70e64682b86591acc167e00c7d1c676e0e8c1c1ef2
 
 | 组件 | 版本 | 来源与校验 |
 |---|---|---|
-| **Claude Code** | 2.1.328（原生二进制，355.7 MB） | 官方 CDN 产物，sha256 `a982d380…65e8` **与官方 manifest 完全一致** |
+| **Claude Code** | 2.1.330（原生二进制，363.5 MB） | 官方 CDN 产物，sha256 `f390eaa0…8ebb` **与官方 manifest 完全一致** |
 | **随身运行时** | glibc 2.31 + libstdc++ 10.2.1 + libgcc_s（5.9 MB） | Debian 11 同源三件套 |
 
 ```
-Claude Code sha256 = a982d38030b97e750848add2cbb2df6d9a70d5544a22ca9b216a349ba25865e8
-            size   = 373,019,152 bytes
+Claude Code sha256 = f390eaa0814e6a1bff74cbb47acb74cb9c89d30ced809fe0af5af00c7bfe8ebb
+            size   = 381,121,040 bytes
 ```
 
 > **下载方式**：国内镜像获取（首次成功），再**按官方 manifest 逐字节校验通过**，
@@ -135,10 +133,10 @@ Claude Code sha256 = a982d38030b97e750848add2cbb2df6d9a70d5544a22ca9b216a349ba25
 
 ```bash
 # 1) 校验
-sha256sum -c claude-offline-2.1.328-linux-x86_64.tar.gz.sha256
+sha256sum -c claude-offline-2.1.330-linux-x86_64.tar.gz.sha256
 
 # 2) 解包（顶层单目录 claude-offline/）
-tar -xzf claude-offline-2.1.328-linux-x86_64.tar.gz
+tar -xzf claude-offline-2.1.330-linux-x86_64.tar.gz
 cd claude-offline
 
 # 3) 安装
@@ -147,13 +145,13 @@ bash install-offline.sh
 
 ```bash
 source ~/.bashrc
-claude --version      # 期望：2.1.328 (Claude Code)
+claude --version      # 期望：2.1.330 (Claude Code)
 ```
 
 ## 四、常用参数
 
 ```bash
-bash install-offline.sh --link           # 省 355MB（符号链接，但离线包不能删）
+bash install-offline.sh --link           # 省 363MB（符号链接，但离线包不能删）
 bash install-offline.sh --system-glibc   # 用目标机 glibc（需 ≥2.26）
 bash install-offline.sh --force          # 覆盖已安装（会先备份）
 bash install-offline.sh --no-path        # 不改 shell rc
@@ -179,22 +177,23 @@ chmod 600 ~/.claude/settings.json      # 内含密钥，收紧权限
 - 若网关用 API Key，键名换成 `ANTHROPIC_API_KEY`。
 - 自定义模型名默认按 1M 上下文估算；想回 200K 加 `"CLAUDE_CODE_DISABLE_1M_CONTEXT": "1"`，
   或精确设定 `"CLAUDE_CODE_MAX_CONTEXT_TOKENS": "<数值>"`。
+- 网关输出上限较小：加 `"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "<数值>"`。
 - 若用沙箱且想免提示：加 `"sandbox": {"autoAllowBashIfSandboxed": true}`。
-- 内网链路慢、常撞 5 分钟上限：可设 `"CLAUDE_STREAM_IDLE_TIMEOUT_MS": "600000"`（本版起在网关上真正生效）。
+- 内网链路慢：可设 `"CLAUDE_STREAM_IDLE_TIMEOUT_MS": "600000"`（2.1.328 起在网关上真正生效）。
 
 > **离线安装 ≠ 离线调用模型**。
 
 ## 六、安装位置（全部在 $HOME 下）
 
 ```
-~/.local/share/claude/versions/2.1.328   # 二进制 355.7 MB
+~/.local/share/claude/versions/2.1.330   # 二进制 363.5 MB
 ~/.local/share/claude/runtime/           # 随身运行时（5.9 MB）
 ~/.local/bin/claude                      # 启动器（#!/bin/sh）
 ~/.claude.json                           # installMethod=native, autoUpdates=false
 ~/.claude/settings.json                  # 模型端点与 Key（需自行创建）
 ```
 
-安装后实测占用：**362 MB**（含 5.9 MB 运行时）。
+安装后实测占用：**370 MB**（含 5.9 MB 运行时）。
 
 ## 七、卸载
 
@@ -210,17 +209,17 @@ rm -rf ~/.local/share/claude ~/.local/bin/claude ~/.claude.json
 2. 随身运行时只解决 **glibc 版本**问题，不改变架构与内核要求（x86_64、内核 ≥ 2.6.32）。
 3. 已自动写入 `DISABLE_AUTOUPDATER=1` 与 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`。
 4. **升级**：`bash install-offline.sh --force`（先备份旧目录），`~/.claude/settings.json` 会沿用。
-5. **本版修了 3 条直接命中你配置的问题**（beta 拒绝时的 auto 失败、5 分钟连接上限、anyOf 类 MCP 工具消失），建议尽快升级。
-6. 升级后留意：**未设权限模式的交互会话现在会以 auto 模式启动**（可用 `disableAutoMode` 关闭）。
+5. **本版修了 `~/.claude.json` 被重置为默认值的数据丢失问题**，建议尽快升级。
+6. 升级后留意：**旧定时任务可能需要重新排期**。
 
 ## 九、分批传输
 
 ```bash
 # 发送端
-split -b 90M -d claude-offline-2.1.328-linux-x86_64.tar.gz cc.part.
+split -b 90M -d claude-offline-2.1.330-linux-x86_64.tar.gz cc.part.
 # 接收端
-cat cc.part.* > claude-offline-2.1.328-linux-x86_64.tar.gz
-sha256sum -c claude-offline-2.1.328-linux-x86_64.tar.gz.sha256
+cat cc.part.* > claude-offline-2.1.330-linux-x86_64.tar.gz
+sha256sum -c claude-offline-2.1.330-linux-x86_64.tar.gz.sha256
 ```
 
 ---
